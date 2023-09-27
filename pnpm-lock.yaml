@@ -242,7 +242,7 @@ packages:
       tslib: 2.6.2
     transitivePeerDependencies:
       - bufferutil
-      - canvas
+      # - canvas
       - supports-color
       - utf-8-validate
     dev: false
@@ -951,7 +951,7 @@ packages:
       tslib: 2.6.2
     transitivePeerDependencies:
       - bufferutil
-      - canvas
+      # - canvas
       - supports-color
       - utf-8-validate
     dev: false
@@ -1613,11 +1613,11 @@ packages:
   /jsdom@16.7.0:
     resolution: {integrity: sha512-u9Smc2G1USStM+s/x1ru5Sxrl6mPYCbByG1U/hUmqaVsm4tbNyS7CicOSRyuGQYZhTu0h84qkZZQ/I+dzizSVw==}
     engines: {node: '>=10'}
-    peerDependencies:
-      canvas: ^2.5.0
-    peerDependenciesMeta:
-      canvas:
-        optional: true
+    # peerDependencies:
+    #   canvas: ^2.5.0
+    # peerDependenciesMeta:
+    #   canvas:
+    #     optional: true
     dependencies:
       abab: 2.0.6
       acorn: 8.10.0
@@ -1655,11 +1655,11 @@ packages:
   /jsdom@22.1.0:
     resolution: {integrity: sha512-/9AVW7xNbsBv6GfWho4TTNjEo9fe6Zhf9O7s0Fhhr3u+awPwAJMKwAMXnkk5vBxflqLW9hTHX/0cs+P3gW+cQw==}
     engines: {node: '>=16'}
-    peerDependencies:
-      canvas: ^2.5.0
-    peerDependenciesMeta:
-      canvas:
-        optional: true
+    # peerDependencies:
+    #   canvas: ^2.5.0
+    # peerDependenciesMeta:
+    #   canvas:
+    #     optional: true
     dependencies:
       abab: 2.0.6
       cssstyle: 3.0.0
@@ -2263,7 +2263,7 @@ packages:
       jsdom: 16.7.0
     transitivePeerDependencies:
       - bufferutil
-      - canvas
+      # - canvas
       - supports-color
       - utf-8-validate
     dev: false
