@@ -117,10 +117,3 @@ export async function extract_from_html(html: string) {
 
   return res;
 }
-
-export function writeToFile(content: string, output: string) {
-  fs.writeFile(output, content, function (err) {
-    if (err) return console.log(err);
-    console.log(`File ${output} was saved!`);
-  });
-}

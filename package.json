@@ -1,8 +1,8 @@
 {
-  "name": "@benprew/clippy",
+  "name": "clipper",
   "version": "1.0.0",
   "description": "It looks like you're trying to clip a webpage, would you like help?",
-  "author": "Ben Prew <ben@throwingbones.com>",
+  "author": "",
   "main": "clip.js",
   "type": "module",
   "scripts": {
@@ -16,7 +16,7 @@
     "@mozilla/readability": "^0.4.4",
     "commander": "^11.0.0",
     "crawlee": "^3.4.0",
-    "jsdom": "^16.2.2",
+    "jsdom": "^16.7.0",
     "playwright": "^1.35.1",
     "turndown": "^6.0.0",
     "turndown-plugin-gfm": "^1.0.2"

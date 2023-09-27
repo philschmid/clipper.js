@@ -1,5 +1,6 @@
 import { program } from '@commander-js/extra-typings';
-import { extract_from_html, extract_from_url, writeToFile } from './clipper';
+import { extract_from_html, extract_from_url } from './clipper';
+import { readHtmlFileFromPath, writeMarkdownToFile } from './utils';
 
 program
   .version("1.0.0")
@@ -15,11 +16,11 @@ program.command("clip").description("Converts HTML to markdown")
     if (args.url) {
       res = await extract_from_url(args.url)
     } else if (args.file) {
-      res = await extract_from_html(args.file)
+      res = await extract_from_html(readHtmlFileFromPath(args.file))
     } else {
       throw new Error("Please specify either a URL or a file path")
     }
-    writeToFile(res, args.output)
+    writeMarkdownToFile(res, args.output)
   });
 
 // const options = program.opts();
