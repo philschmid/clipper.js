@@ -1,57 +1,373 @@
-CLI stands for Command-Line Interface. CLIs are often the core tools for automating tasks, such as deploying production applications, running tests, building reports, migrating data, DevOps, and the list goes on and on. If you find yourself doing the same things over and over again, chances are you can automate those steps with a script and save yourself a lot of time.
+# Efficient Inference on a Single GPU
 
-A bad CLI can easily discourage users from interacting with it. Building successful CLIs requires attention to detail and empathy for the user in order to create a good user experience. It is very easy to get wrong.
+In addition to this guide, relevant information can be found as well in [the guide for training on a single GPU](https://huggingface.co/docs/transformers/main/en/perf_train_gpu_one) and [the guide for inference on CPUs](https://huggingface.co/docs/transformers/main/en/perf_infer_cpu).
 
-## Most popular
+## Flash Attention 2
 
-1.  [zx](https://github.com/google/zx) ([37.8k](https://github.com/google/zx) ⭐) — A tool for writing better scripts in JavaScript. It provides useful wrappers around `child_process`, escapes arguments and gives sensible defaults. It also has some handy features like auto-install, PowerShell support, retry and spinner helpers, etc.
+Note that this feature is experimental and might considerably change in future versions. For instance, the Flash Attention 2 API might migrate to `BetterTransformer` API in the near future.
+
+Flash Attention 2 can considerably speed up transformer-based models’ training and inference speed. Flash Attention 2 has been introduced in the [official Flash Attention repository](https://github.com/Dao-AILab/flash-attention) by Tri Dao et al. The scientific paper on Flash Attention can be found [here](https://arxiv.org/abs/2205.14135).
+
+Make sure to follow the installation guide on the repository mentioned above to properly install Flash Attention 2. Once that package is installed, you can benefit from this feature.
+
+We natively support Flash Attention 2 for the following models:
+
+-   Llama
+-   Falcon
+
+You can request to add Flash Attention 2 support for more models by opening an issue on GitHub, and even open a Pull Request to integrate the changes. The supported models can be used for inference and training, including training with padding tokens - _which is currently not supported for `BetterTransformer` API below._
+
+Flash Attention 2 can only be used when the models’ dtype is `fp16` or `bf16` and runs only on NVIDIA-GPU devices. Make sure to cast your model to the appropriate dtype and load them on a supported device before using that feature.
+
+### Quick usage
+
+To enable Flash Attention 2 in your model, add `use_flash_attention_2` in the `from_pretrained` arguments:
+
+```
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
+
+model_id = "tiiuae/falcon-7b"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, 
+    torch_dtype=torch.bfloat16, 
+    use_flash_attention_2=True,
+)
+```
+
+And use it for generation or fine-tuning.
+
+### Expected speedups
+
+You can benefit from considerable speedups for fine-tuning and inference, especially for long sequences. However, since Flash Attention does not support computing attention scores with padding tokens under the hood, we must manually pad / unpad the attention scores for batched inference when the sequence contains padding tokens. This leads to a significant slowdown for batched generations with padding tokens.
+
+To overcome this, one should use Flash Attention without padding tokens in the sequence for training (e.g., by packing a dataset, i.e., concatenating sequences until reaching the maximum sequence length. An example is provided [here](https://github.com/huggingface/transformers/blob/main/examples/pytorch/language-modeling/run_clm.py#L516).
+
+Below is the expected speedup you can get for a simple forward pass on [tiiuae/falcon-7b](https://hf.co/tiiuae/falcon-7b) with a sequence length of 4096 and various batch sizes, without padding tokens:
+
+![](https://huggingface.co/datasets/ybelkada/documentation-images/resolve/main/falcon-7b-inference-large-seqlen.png)
+
+Below is the expected speedup you can get for a simple forward pass on [`meta-llama/Llama-7b-hf`](https://hf.co/meta-llama/Llama-7b-hf) with a sequence length of 4096 and various batch sizes, without padding tokens:
+
+![](https://huggingface.co/datasets/ybelkada/documentation-images/resolve/main/llama-7b-inference-large-seqlen.png)
+
+For sequences with padding tokens (training with padding tokens or generating with padding tokens), we need to unpad / pad the input sequences to compute correctly the attention scores. For relatively small sequence length, on pure forward pass, this creates an overhead leading to a small speedup (below 30% of the input has been filled with padding tokens).
+
+![](https://huggingface.co/datasets/ybelkada/documentation-images/resolve/main/llama-2-small-seqlen-padding.png)
+
+But for large sequence length you can benefit from interesting speedup for pure inference (also training)
+
+Note that Flash Attention makes the attention computation more memory efficient, meaning you can train with much larger sequence lengths without facing CUDA OOM issues. It can lead up to memory reduction up to 20 for large sequence length. Check out [the official flash attention repository](https://github.com/Dao-AILab/flash-attention) for more details.
+
+![](https://huggingface.co/datasets/ybelkada/documentation-images/resolve/main/llama-2-large-seqlen-padding.png)
+
+### Advanced usage
+
+You can combine this feature with many exisiting feature for model optimization. Check out few examples below:
+
+### Combining Flash Attention 2 and 8-bit models
+
+You can combine this feature together with 8-bit quantization:
+
+```
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
+
+model_id = "tiiuae/falcon-7b"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, 
+    load_in_8bit=True,
+    use_flash_attention_2=True,
+)
+```
+
+### Combining Flash Attention 2 and 4-bit models
+
+You can combine this feature together with 4-bit quantization:
+
+```
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
+
+model_id = "tiiuae/falcon-7b"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, 
+    load_in_4bit=True,
+    use_flash_attention_2=True,
+)
+```
+
+### Combining Flash Attention 2 and PEFT
+
+You can combine this feature together with PEFT for training adapters using Flash Attention 2 under the hood:
+
+```
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
+from peft import LoraConfig
+
+model_id = "tiiuae/falcon-7b"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, 
+    load_in_4bit=True,
+    use_flash_attention_2=True,
+)
+
+lora_config = LoraConfig(
+    r=8,
+    task_type="CAUSAL_LM"
+)
+
+model.add_adapter(lora_config)
+
+... 
+```
+
+## BetterTransformer
+
+[BetterTransformer](https://huggingface.co/docs/optimum/bettertransformer/overview) converts 🤗 Transformers models to use the PyTorch-native fastpath execution, which calls optimized kernels like Flash Attention under the hood.
+
+BetterTransformer is also supported for faster inference on single and multi-GPU for text, image, and audio models.
+
+Flash Attention can only be used for models using fp16 or bf16 dtype. Make sure to cast your model to the appropriate dtype before using BetterTransformer.
+
+### Encoder models
+
+PyTorch-native [`nn.MultiHeadAttention`](https://pytorch.org/blog/a-better-transformer-for-fast-transformer-encoder-inference/) attention fastpath, called BetterTransformer, can be used with Transformers through the integration in the [🤗 Optimum library](https://huggingface.co/docs/optimum/bettertransformer/overview).
+
+PyTorch’s attention fastpath allows to speed up inference through kernel fusions and the use of [nested tensors](https://pytorch.org/docs/stable/nested.html). Detailed benchmarks can be found in [this blog post](https://medium.com/pytorch/bettertransformer-out-of-the-box-performance-for-huggingface-transformers-3fbe27d50ab2).
+
+After installing the [`optimum`](https://github.com/huggingface/optimum) package, to use Better Transformer during inference, the relevant internal modules are replaced by calling [to\_bettertransformer()](https://huggingface.co/docs/transformers/main/en/main_classes/model#transformers.PreTrainedModel.to_bettertransformer):
+
+```
+model = model.to_bettertransformer()
+```
+
+The method [reverse\_bettertransformer()](https://huggingface.co/docs/transformers/main/en/main_classes/model#transformers.PreTrainedModel.reverse_bettertransformer) allows to go back to the original modeling, which should be used before saving the model in order to use the canonical transformers modeling:
+
+```
+model = model.reverse_bettertransformer()
+model.save_pretrained("saved_model")
+```
+
+Have a look at this [blog post](https://medium.com/pytorch/bettertransformer-out-of-the-box-performance-for-huggingface-transformers-3fbe27d50ab2) to learn more about what is possible to do with `BetterTransformer` API for encoder models.
+
+### Decoder models
+
+For text models, especially decoder-based models (GPT, T5, Llama, etc.), the BetterTransformer API converts all attention operations to use the [`torch.nn.functional.scaled_dot_product_attention` operator](https://pytorch.org/docs/master/generated/torch.nn.functional.scaled_dot_product_attention) (SDPA) that is only available in PyTorch 2.0 and onwards.
+
+To convert a model to BetterTransformer:
+
+```
+from transformers import AutoModelForCausalLM
+
+model = AutoModelForCausalLM.from_pretrained("facebook/opt-350m")
+
+model.to_bettertransformer()
+
+
+```
+
+SDPA can also call [Flash Attention](https://arxiv.org/abs/2205.14135) kernels under the hood. To enable Flash Attention or to check that it is available in a given setting (hardware, problem size), use [`torch.backends.cuda.sdp_kernel`](https://pytorch.org/docs/master/backends.html#torch.backends.cuda.sdp_kernel) as a context manager:
+
+```
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+model = AutoModelForCausalLM.from_pretrained("facebook/opt-350m", torch_dtype=torch.float16).to("cuda")
+# convert the model to BetterTransformer
+model.to_bettertransformer()
+
+input_text = "Hello my dog is cute and"
+inputs = tokenizer(input_text, return_tensors="pt").to("cuda")
+
++ with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
+    outputs = model.generate(**inputs)
+
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+```
+
+If you see a bug with a traceback saying
+
+```
+RuntimeError: No available kernel.  Aborting execution.
+```
+
+try using the PyTorch nightly version, which may have a broader coverage for Flash Attention:
+
+```
+pip3 install -U --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu118
+```
+
+Or make sure your model is correctly casted in float16 or bfloat16
+
+Have a look at [this detailed blogpost](https://pytorch.org/blog/out-of-the-box-acceleration/) to read more about what is possible to do with `BetterTransformer` + SDPA API.
+
+## `bitsandbytes` integration for FP4 mixed-precision inference
+
+You can install `bitsandbytes` and benefit from easy model compression on GPUs. Using FP4 quantization you can expect to reduce up to 8x the model size compared to its native full precision version. Check out below how to get started.
+
+Note that this feature can also be used in a multi GPU setup.
+
+### Requirements
+
+-   Latest `bitsandbytes` library `pip install bitsandbytes>=0.39.0`
     
-2.  [Commander.js](https://github.com/tj/commander.js) ([25k](https://github.com/tj/commander.js) ⭐) — The complete solution for NodeJS command-line interfaces, has everything you need to declair program variables, handle actions, parse arguments, custom helps, custom event listeners, etc.
+-   Install latest `accelerate` from source `pip install git+https://github.com/huggingface/accelerate.git`
     
-3.  [Ink](https://github.com/vadimdemedes/ink) ([23.8k](https://github.com/vadimdemedes/ink) ⭐) — Ink provides the same component-based UI building experience that React offers in the browser, but for command-line apps. It uses Yoga to build Flexbox layouts in the terminal, so most CSS-like props are available in Ink as well. If you are already familiar with React, you already know Ink.
-    
-4.  [Chalk](https://github.com/chalk/chalk) ([20.4k](https://github.com/chalk/chalk) ⭐) — Chalk supports 256 colors and Truecolor (16 million colors) on supported terminal apps, detects color support automatically, ability to nest styles, etc.
-    
-5.  [Inquirer.js](https://github.com/SBoudrias/Inquirer.js) ([18.2k](https://github.com/SBoudrias/Inquirer.js) ⭐) — A collection of common interactive command line user interfaces, it eases the process of providing error feedback, asking questions, parsing input, validating answers, managing hierarchical prompts.
-    
-6.  [fx](https://github.com/antonmedv/fx) ([16.7k](https://github.com/antonmedv/fx) ⭐) — A terminal JSON viewer. It allows you to view, filter and manipulate JSON data in a convenient way. It supports mouse interaction, streaming mode, different languages for reducers, themes and more.
-    
-7.  [Blessed](https://github.com/yaronn/blessed-contrib) ([15.2k](https://github.com/yaronn/blessed-contrib) ⭐) — A library for building terminal dashboards using ascii/ansi art and JavaScript. It extends blessed with custom widgets such as line charts, bar charts, maps, gauges, donuts, etc.
-    
-8.  [ShellJS](https://documentup.com/shelljs/shelljs) ([13.9k](https://github.com/shelljs/shelljs) ⭐) — A portable (Windows/Linux/macOS) implementation of Unix shell commands on top of the Node.js API. You can use it to eliminate your shell script’s dependency on Unix while still keeping its familiar and powerful commands.
-    
-9.  [yargs](https://yargs.js.org/) ([10.5k](https://github.com/yargs/yargs) ⭐) — A Node.js library for parsing command line arguments and generating elegant user interfaces. It allows you to create commands, options, help menus, validation, and more.
-    
-10.  [oclif](https://oclif.io/) ([8.4k](https://github.com/oclif/oclif) ⭐) — An open source framework for building CLIs in Node.js. It allows you to create simple or advanced CLIs with flags, subcommands, plugins, testing, and auto-documentation.
-    
-11.  [Prompts](https://github.com/terkelg/prompts) ([8k](https://github.com/terkelg/prompts) ⭐) — A Node.js module that provides **lightweight, beautiful and user-friendly interactive prompts** for CLIs. It allows you to easily create and use different types of prompts, such as text, number, confirm, list, autocomplete, etc. You can also customize the prompts with options like initial value, validation, message, choices, etc.
-    
-12.  [Enquirer](https://github.com/enquirer/enquirer) ([7.1k](https://github.com/enquirer/enquirer) ⭐) — A Node.js module that provides stylish, intuitive and user-friendly prompts for the command-line interface1. It is similar to [prompts](https://github.com/terkelg/prompts), but it has some differences and features.
+-   Install latest `transformers` from source `pip install git+https://github.com/huggingface/transformers.git`
     
 
-## How to build a CLI tool in Node.js
+### Running FP4 models - single GPU setup - Quickstart
 
-To build a CLI in Node.js, you can utilize various components and libraries that streamline the development process and provide essential functionalities. Here are some key components and libraries you may need:
+You can quickly run a FP4 model on a single GPU by running the following code:
 
--   **Command-Line Argument Parser**: Libraries like [Commander.js](https://github.com/tj/commander.js), [yargs](https://github.com/yargs/yargs), or [minimist](https://github.com/minimistjs/minimist) help with parsing and handling command-line arguments, options, and flags. They simplify the process of defining and extracting data from command-line inputs.
-    
--   **User Input Handling**: Libraries such as [Prompts](https://github.com/terkelg/prompts) or [Enquirer](https://github.com/enquirer/enquirer) facilitate capturing and processing user input from the command line. They provide features like prompts, validation, and input handling for interactive CLI experiences.
-    
--   **Output Formatting**: Libraries like [Chalk](https://github.com/chalk/chalk) or [colors.js](https://github.com/Marak/colors.js) allow you to add colors, styles, and formatting to the output messages of your CLI tool.
-    
--   **Command Execution and Routing**: You can use libraries like [Commander.js](https://github.com/tj/commander.js) or [Vorpal](https://github.com/dthree/vorpal) to manage command execution and routing. They provide mechanisms to define commands, associate them with specific actions or functions, and handle command dispatching.
-    
--   **File System Operations**: Node.js has built-in modules like `fs` (File System) that enable you to perform various file system operations, such as reading and writing files, creating directories, or manipulating file metadata. These modules are useful for file-related tasks within your CLI.
-    
--   **API Clients and HTTP Requests**: If your CLI interacts with web APIs, you may need libraries like [Axios](https://github.com/axios/axios) or [node-fetch](https://github.com/node-fetch/node-fetch) to make HTTP requests and consume API responses.
-    
--   **Configuration Management**: Libraries like [dotenv](https://github.com/motdotla/dotenv) or [rc](https://github.com/dominictarr/rc) can assist in managing configuration files and environment variables for your CLI tool.
-    
--   **Testing Frameworks**: Testing frameworks such as [Jest](https://github.com/jestjs/jest) or [Mocha](https://github.com/mochajs/mocha), along with assertion libraries like Chai, help you write and run tests for your CLI application.
-    
--   **Logging and Error Handling**: Libraries like [winston](https://github.com/winstonjs/winston), [signale](https://github.com/klaudiosinani/signale) or [bunyan](https://github.com/trentm/node-bunyan) offer powerful logging capabilities for your CLI tool, allowing you to log important information, debug messages, or errors.
-    
--   **Packaging and Distribution**: To package your CLI tool for distribution, you can use libraries like npm or yarn. They allow you to define dependencies, manage versioning, and create distributable packages that can be installed and executed globally. You can also use [pkg](https://github.com/vercel/pkg) or [nexe](https://github.com/nexe/nexe) to create binary executable files, so you can distribute your CLIs without requiring Node.js installation.
-    
+```
+from transformers import AutoModelForCausalLM
 
-These are just some of the components and libraries commonly used when building CLIs in Node.js. The specific libraries you choose may depend on your project’s requirements and the features you aim to incorporate into your CLI tool.
+model_name = "bigscience/bloom-2b5"
+model_4bit = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", load_in_4bit=True)
+```
+
+Note that `device_map` is optional but setting `device_map = 'auto'` is prefered for inference as it will dispatch efficiently the model on the available ressources.
+
+### Running FP4 models - multi GPU setup
+
+The way to load your mixed 4-bit model in multiple GPUs is as follows (same command as single GPU setup):
+
+```
+model_name = "bigscience/bloom-2b5"
+model_4bit = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", load_in_4bit=True)
+```
+
+But you can control the GPU RAM you want to allocate on each GPU using `accelerate`. Use the `max_memory` argument as follows:
+
+```
+max_memory_mapping = {0: "600MB", 1: "1GB"}
+model_name = "bigscience/bloom-3b"
+model_4bit = AutoModelForCausalLM.from_pretrained(
+    model_name, device_map="auto", load_in_4bit=True, max_memory=max_memory_mapping
+)
+```
+
+In this example, the first GPU will use 600MB of memory and the second 1GB.
+
+### Advanced usage
+
+For more advanced usage of this method, please have a look at the [quantization](https://huggingface.co/docs/transformers/main/en/main_classes/quantization) documentation page.
+
+## `bitsandbytes` integration for Int8 mixed-precision matrix decomposition
+
+Note that this feature can also be used in a multi GPU setup.
+
+From the paper [`LLM.int8() : 8-bit Matrix Multiplication for Transformers at Scale`](https://arxiv.org/abs/2208.07339), we support Hugging Face integration for all models in the Hub with a few lines of code. The method reduces `nn.Linear` size by 2 for `float16` and `bfloat16` weights and by 4 for `float32` weights, with close to no impact to the quality by operating on the outliers in half-precision.
+
+![HFxbitsandbytes.png](https://cdn-uploads.huggingface.co/production/uploads/1659861207959-62441d1d9fdefb55a0b7d12c.png)
+
+Int8 mixed-precision matrix decomposition works by separating a matrix multiplication into two streams: (1) a systematic feature outlier stream matrix multiplied in fp16 (0.01%), (2) a regular stream of int8 matrix multiplication (99.9%). With this method, int8 inference with no predictive degradation is possible for very large models. For more details regarding the method, check out the [paper](https://arxiv.org/abs/2208.07339) or our [blogpost about the integration](https://huggingface.co/blog/hf-bitsandbytes-integration).
+
+![MixedInt8.gif](https://cdn-uploads.huggingface.co/production/uploads/1660567469965-62441d1d9fdefb55a0b7d12c.gif)
+
+Note, that you would require a GPU to run mixed-8bit models as the kernels have been compiled for GPUs only. Make sure that you have enough GPU memory to store the quarter (or half if your model weights are in half precision) of the model before using this feature. Below are some notes to help you use this module, or follow the demos on [Google colab](#colab-demos).
+
+### Requirements
+
+-   If you have `bitsandbytes<0.37.0`, make sure you run on NVIDIA GPUs that support 8-bit tensor cores (Turing, Ampere or newer architectures - e.g. T4, RTX20s RTX30s, A40-A100). For `bitsandbytes>=0.37.0`, all GPUs should be supported.
+-   Install the correct version of `bitsandbytes` by running: `pip install bitsandbytes>=0.31.5`
+-   Install `accelerate` `pip install accelerate>=0.12.0`
+
+### Running mixed-Int8 models - single GPU setup
+
+After installing the required libraries, the way to load your mixed 8-bit model is as follows:
+
+```
+from transformers import AutoModelForCausalLM
+
+model_name = "bigscience/bloom-2b5"
+model_8bit = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", load_in_8bit=True)
+```
+
+For text generation, we recommend:
+
+-   using the model’s `generate()` method instead of the `pipeline()` function. Although inference is possible with the `pipeline()` function, it is not optimized for mixed-8bit models, and will be slower than using the `generate()` method. Moreover, some sampling strategies are like nucleaus sampling are not supported by the `pipeline()` function for mixed-8bit models.
+-   placing all inputs on the same device as the model.
+
+Here is a simple example:
+
+```
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_name = "bigscience/bloom-2b5"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model_8bit = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", load_in_8bit=True)
+
+prompt = "Hello, my llama is cute"
+inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+generated_ids = model.generate(**inputs)
+outputs = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+```
+
+### Running mixed-int8 models - multi GPU setup
+
+The way to load your mixed 8-bit model in multiple GPUs is as follows (same command as single GPU setup):
+
+```
+model_name = "bigscience/bloom-2b5"
+model_8bit = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", load_in_8bit=True)
+```
+
+But you can control the GPU RAM you want to allocate on each GPU using `accelerate`. Use the `max_memory` argument as follows:
+
+```
+max_memory_mapping = {0: "1GB", 1: "2GB"}
+model_name = "bigscience/bloom-3b"
+model_8bit = AutoModelForCausalLM.from_pretrained(
+    model_name, device_map="auto", load_in_8bit=True, max_memory=max_memory_mapping
+)
+```
+
+In this example, the first GPU will use 1GB of memory and the second 2GB.
+
+### Colab demos
+
+With this method you can infer on models that were not possible to infer on a Google Colab before. Check out the demo for running T5-11b (42GB in fp32)! Using 8-bit quantization on Google Colab:
+
+[![Open In Colab: T5-11b demo](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1YORPWx4okIHXnjW7MSAidXN29mPVNT7F?usp=sharing)
+
+Or this demo for BLOOM-3B:
+
+[![Open In Colab: BLOOM-3b demo](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1qOjXfQIAULfKvZqwCen8-MoWKGdSatZ4?usp=sharing)
+
+## Advanced usage: mixing FP4 (or Int8) and BetterTransformer
+
+You can combine the different methods described above to get the best performance for your model. For example, you can use BetterTransformer with FP4 mixed-precision inference + flash attention:
+
+```
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.float16
+)
+
+tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+model = AutoModelForCausalLM.from_pretrained("facebook/opt-350m", quantization_config=quantization_config)
+
+input_text = "Hello my dog is cute and"
+inputs = tokenizer(input_text, return_tensors="pt").to("cuda")
+
+with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
+    outputs = model.generate(**inputs)
+
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+```

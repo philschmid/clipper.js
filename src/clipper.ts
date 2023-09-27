@@ -1,16 +1,16 @@
 
 import { Readability } from '@mozilla/readability';
-import { JSDOM } from 'jsdom';
 // @ts-ignore
 import { gfm } from 'turndown-plugin-gfm';
-import url from 'url';
 import TurndownService from 'turndown';
-import fs from 'fs';
+import { JSDOM } from 'jsdom';
 
 const turndownService = new TurndownService({
   headingStyle: 'atx',
   hr: '---',
-  bulletListMarker: '-'
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
+
 });
 
 turndownService.use(gfm);
@@ -20,19 +20,15 @@ const getExt = (node: any) => {
   const getFirstTag = (node: Element) =>
     node.outerHTML.split('>').shift()! + '>';
 
-  const match = getFirstTag(node).match(
-    /(highlight-source-|language-)\[a-z\]+/
+  const match = node.outerHTML.match(
+    /(highlight-source-|language-)[a-z]+/
   );
 
   if (match) return match[0].split('-').pop();
 
-  // More complex match where the _parent_ (single) has that. 
-  // The parent of the <pre> is not a "wrapping" parent, so skip those
-  if (node.parentNode!.childNodes.length !== 1) return '';
-
   // Check the parent just in case
   const parent = getFirstTag(node.parentNode!).match(
-    /(highlight-source-|language-)\[a-z\]+/
+    /(highlight-source-|language-)[a-z]+/
   );
 
   if (parent) return parent[0].split('-').pop();
@@ -40,8 +36,9 @@ const getExt = (node: any) => {
   const getInnerTag = (node: Element) =>
     node.innerHTML.split('>').shift()! + '>';
 
+
   const inner = getInnerTag(node).match(
-    /(highlight-source-|language-)\[a-z\]+/
+    /(highlight-source-|language-)[a-z]+/
   );
 
   if (inner) return inner[0].split('-').pop();
@@ -72,48 +69,42 @@ turndownService.addRule('strikethrough', {
   }
 });
 
-export async function extract_from_url(page: string) {
-  const dom = await JSDOM.fromURL(page);
-
-  let imgs = dom.window.document.querySelectorAll('img');
-
-  for (let i = 0; i < imgs.length; i++) {
-    let imgSrc = imgs[i].getAttribute('src');
-
-    if (imgSrc) {
-      imgs[i].setAttribute('src', url.resolve(page, imgSrc));
-    }
-  }
-
+function extract_from_dom(dom: JSDOM) {
   let article = new Readability(dom.window.document, {
-    keepClasses: true
+    keepClasses: true,
+    debug: false,
+    charThreshold: 100,
   }).parse();
 
   if (!article) {
     throw new Error("Failed to parse article");
   }
+  // remove HTML comments
+  article.content = article.content.replace(/(\<!--.*?\-->)/g, "");
 
-  let res = turndownService.turndown(article.content);
-  res = res.replaceAll(" HTML_TAG_START ", "").replaceAll(" HTML_TAG_END ", "")
+  let contentWithTitle: string
+  if (article.title.length > 0) {
+    contentWithTitle = `<h1>${article.title}</h1>\n${article.content}`
+  } else {
+    contentWithTitle = article.content
+    contentWithTitle = contentWithTitle.replace("<h2>", "<h1>").replace("</h2>", "</h1>")
+  }
+
+  // contert to markdown
+  let res = turndownService.turndown(contentWithTitle);
+
+  // replace weird header refs
   const pattern = /\[\]\(#[^)]*\)/g;
   res = res.replace(pattern, '')
   return res
 }
 
+export async function extract_from_url(page: string) {
+  const dom = await JSDOM.fromURL(page);
+  return extract_from_dom(dom)
+}
+
 export async function extract_from_html(html: string) {
-  // read html from file
-  // const html = fs.readFileSync('test.html', 'utf8')
-
   const dom = new JSDOM(html);
-
-  let article = new Readability(dom.window.document, {
-    keepClasses: true
-  }).parse();
-  if (!article) {
-    throw new Error("Failed to parse article");
-  }
-
-  const res = turndownService.turndown(article.content);
-
-  return res;
+  return extract_from_dom(dom)
 }

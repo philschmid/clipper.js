@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { program } from '@commander-js/extra-typings';
 import { extract_from_html, extract_from_url } from './clipper';
 import { readHtmlFileFromPath, writeMarkdownToFile } from './utils';
