@@ -1,0 +1,30 @@
+{
+  "name": "@benprew/clippy",
+  "version": "1.0.0",
+  "description": "It looks like you're trying to clip a webpage, would you like help?",
+  "author": "Ben Prew <ben@throwingbones.com>",
+  "main": "clip.js",
+  "type": "module",
+  "scripts": {
+    "run": "src/index.ts"
+  },
+  "bin": {
+    "clippy": "./clip.js"
+  },
+  "dependencies": {
+    "@huggingface/hub": "^0.8.3",
+    "@mozilla/readability": "^0.4.4",
+    "commander": "^11.0.0",
+    "crawlee": "^3.4.0",
+    "jsdom": "^16.2.2",
+    "playwright": "^1.35.1",
+    "turndown": "^6.0.0",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@commander-js/extra-typings": "^11.0.0",
+    "@types/turndown": "^5.0.2",
+    "tsx": "^3.13.0",
+    "typescript": "^5.2.2"
+  }
+}
