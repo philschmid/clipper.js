@@ -9,14 +9,15 @@ Clip articles from the web and save as markdown.  Uses [Mozilla's Readability li
 Adjust urls in crawl.js and run
 
 ```
-pnpm run test clip -f test2.html
+pnpm run test clip -i test2.html -f json -o test.json
 ```
 
 
 from url
 
 ```bash
-pnpm run test clip -u https://huggingface.co/docs/trl/dpo_trainer
+pnpm run test clip -u https://huggingface.co/docs/transformers/index
+pnpm run test clip -u https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/setup/neuron-setup/pytorch/neuronx/ubuntu/torch-neuronx-ubuntu20.html#setup-torch-neuronx-ubuntu20
 ```
 
 ## Test 
@@ -32,3 +33,11 @@ remove package
 ```
 sudo npm r clipper -g
 ```
+
+
+## Tasls
+
+* [x] check if title == first h2 
+* [x] output format json
+* [ ] crawler 
+* [ ] add to npm

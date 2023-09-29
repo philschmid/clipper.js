@@ -82,16 +82,22 @@ function extract_from_dom(dom: JSDOM) {
   // remove HTML comments
   article.content = article.content.replace(/(\<!--.*?\-->)/g, "");
 
-  let contentWithTitle: string
+  // Try to add proper h1 if title is missing
   if (article.title.length > 0) {
-    contentWithTitle = `<h1>${article.title}</h1>\n${article.content}`
-  } else {
-    contentWithTitle = article.content
-    contentWithTitle = contentWithTitle.replace("<h2>", "<h1>").replace("</h2>", "</h1>")
-  }
 
+    // check if first h2 is the same as title
+    const h2Regex = /<h2[^>]*>(.*?)<\/h2>/;
+    const match = article.content.match(h2Regex);
+    if (match?.[0].includes(article.title)) {
+      // replace fist h2 with h1
+      article.content = article.content.replace("<h2", "<h1").replace("</h2", "</h1")
+    } else {
+      // add title as h1
+      article.content = `<h1>${article.title}</h1>\n${article.content}`
+    }
+  }
   // contert to markdown
-  let res = turndownService.turndown(contentWithTitle);
+  let res = turndownService.turndown(article.content);
 
   // replace weird header refs
   const pattern = /\[\]\(#[^)]*\)/g;
