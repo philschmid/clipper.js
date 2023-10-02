@@ -79,3 +79,11 @@ Clipper uses the following open source libraries:
 ## License
 
 * Apache 2.0
+
+
+## Release to npm
+
+1. Run `npm run build`
+2. Run `npm publish --access public`
+3. Create a new release on GitHub
+4. Update the version in `package.json` to the next patch version
