@@ -3,6 +3,7 @@
 import { program } from '@commander-js/extra-typings';
 import { extract_from_html, extract_from_url } from './clipper';
 import { readHtmlFileFromPath, writeMarkdownToFile, writeMarkdownToJsonlines } from './utils';
+import { crawl } from './crawler';
 
 program
   .version("1.0.0")
@@ -31,6 +32,19 @@ program.command("clip").description("Converts HTML to markdown")
     }
   });
 
-// const options = program.opts();
-// console.log(options)
+program.command("crawl").description("Crawls website, converts HTML to markdown and saves result in jsonl file")
+  .option("-u, --url <value>", "Start url to crawl",)
+  .option("-g, --globs <value>", "additional glob patterns to crawl or ignore")
+  .option("-o, --output <value>", "Path to output file", "dataset.jsonl")
+  .action(async (args, options) => {
+    // console.log(options)
+    let res: string
+    if (args.url) {
+      await crawl(args.url, args.output, args.globs?.split(",") || [])
+    } else {
+      throw new Error("Please specify either a URL or a file path")
+    }
+  });
+
+
 program.parse();

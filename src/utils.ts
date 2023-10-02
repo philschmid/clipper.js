@@ -19,9 +19,9 @@ export function writeMarkdownToJsonlines(markdown: string | string[], output: st
   // check if outout is a jsonl file else remove extension and add .jsonl
   const outputFileName = output.endsWith('.jsonl') ? output : output.replace(/\.[^/.]+$/, "") + '.jsonl'
   // check if markdown is string, if convert to array
-  const data = Array.isArray(markdown) ? markdown : [markdown]
+  const data = Array.isArray(markdown) ? markdown : [{ markdown: markdown }]
   // iterate over array and write each element to a new line
-  writeFileSync(outputFileName, data.map((d) => JSON.stringify({ "markdown": d })).join('\n'))
+  writeFileSync(outputFileName, data.map((d) => JSON.stringify(d)).join('\n'))
   // return filename
   return outputFileName
 }

@@ -1,43 +1,81 @@
-# Clipper.js 
+# Clipper
 
-Opensource commandline webclipper.
+Clipper is a Node.js command line tool that allows you to easily clip content from web pages and convert it to Markdown. It uses [Mozilla's Readability library](https://github.com/mozilla/readability) and [Turndown](https://github.com/mixmark-io/turndown) under the hood to parse web page content and convert it to Markdown.
 
-Clip articles from the web and save as markdown.  Uses [Mozilla's Readability library](https://github.com/mozilla/readability) to build a simplified article and https://crawlee.dev/docs/quick-start and Turndown to convert to markdown.
+Clipper provides a quick and simple way to save bits of content from the web for personal archival or note taking purposes, similar to browser extensions like Evernote Web Clipper or Notion Web Clipper. However, Clipper runs entirely in the terminal so you don't need to install any extensions or sign up for accounts.
+
+## Installation
+
+```
+npm install -g @philschmid/clipper
+```
 
 ## Usage
 
-Adjust urls in crawl.js and run
+### Clip
+
+**Options:**
+
+- `-i, --input <file>` - Input file (html) to clip content from
+- `-u, --url <url>` - URL to clip content from
+- `-f, --format <format>` - Output format (markdown, json) (default: markdown)
+- `-o, --output <file>` - Output file for clipped content (default: output.md)
+
+
+**Examples:**
+
+1. Clip content from a URL:
 
 ```
-pnpm run test clip -i test2.html -f json -o test.json
+clipper clip -u <url>
 ```
 
-
-from url
-
-```bash
-pnpm run test clip -u https://huggingface.co/docs/transformers/index
-pnpm run test clip -u https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/setup/neuron-setup/pytorch/neuronx/ubuntu/torch-neuronx-ubuntu20.html#setup-torch-neuronx-ubuntu20
-```
-
-## Test 
-https://blog.logrocket.com/building-typescript-cli-node-js-commander/
-link package
-  
-```bash 
-npm install -g .
-```
-
-remove package
+2. Clip content from a file:
 
 ```
-sudo npm r clipper -g
+clipper clip -i <file>
 ```
 
+### Crawl 
 
-## Tasls
+> [!WARNING]  
+> Only use this command if you know what you're doing. Crawling websites can be resource intensive and may cause issues for the website owner. Use at your own risk.
 
-* [x] check if title == first h2 
-* [x] output format json
-* [ ] crawler 
-* [ ] add to npm
+**Options:**
+
+- `-u, --url <url>` - URL to crawl
+- `-g, --glob <glob>` - Glob pattern to match URLs against
+- `-o, --output <file>` - Output file for crawled content (default: dataset.jsonl)
+
+**Examples:**
+
+Crawl a site and clip all pages:
+
+```
+clipper crawl <url>
+```
+
+Results will be saved in `dataset.jsonl` file in the current directory.
+
+
+## Local Development
+
+- Clone the repo
+- Run `npm install`
+- Run `npm run dev` to start development mode with live reloading
+- Run `npm run build` to build for production
+- Run `npm install -g .` to symlink the CLI for local testing
+- Run `npm run test clip -u https://huggingface.co/docs/transformers/index` to test the CLI
+- Run `npm run test crawl -u https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/index.html -g https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/\*\*/\*` to crawl the AWS Neuron docs
+- Remove the symlink with `npm r clipper -g`
+## Credits
+
+Clipper uses the following open source libraries:
+
+- [Mozilla Readability](https://github.com/mozilla/readability) - For parsing article content
+- [Turndown](https://github.com/mixmark-io/turndown) - For converting HTML to Markdown  
+- [Crawlee](https://crawlee.dev/) - For crawling websites
+
+## License
+
+* Apache 2.0

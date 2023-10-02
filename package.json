@@ -13,8 +13,10 @@
     "@huggingface/hub": "^0.8.3",
     "@mozilla/readability": "^0.4.4",
     "commander": "^11.0.0",
+    "crawlee": "^3.5.4",
     "jsdom": "^22.1.0",
     "linkedom": "^0.15.3",
+    "playwright": "^1.38.1",
     "ts-node": "^10.9.1",
     "turndown": "^6.0.0",
     "turndown-plugin-gfm": "^1.0.2"

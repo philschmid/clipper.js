@@ -25,7 +25,7 @@ coverage
 # Dependency directory
 node_modules
 bower_components
-
+storage/
 # Editors
 .idea
 *.iml
@@ -39,3 +39,4 @@ dist/**/*
 
 # ignore yarn.lock
 yarn.lock
+dataset.jsonl
