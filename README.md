@@ -57,7 +57,7 @@ clipper clip -i <file>
 Crawl a site and clip all pages:
 
 ```
-clipper crawl <url>
+clipper crawl -u <url>
 ```
 
 Results will be saved in `dataset.jsonl` file in the current directory.
