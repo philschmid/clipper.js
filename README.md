@@ -83,7 +83,8 @@ Clipper uses the following open source libraries:
 
 ## Release to npm
 
-1. Run `npm run build`
-2. Run `npm publish --access public`
-3. Create a new release on GitHub
-4. Update the version in `package.json` to the next patch version
+1. Update the version in `package.json` if minor or major version
+2. Run `npm run build`
+3. Run `npm publish --access public`
+4. Create a new release on GitHub
+5. Update the version in `package.json` to the next patch version
