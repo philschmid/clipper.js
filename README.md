@@ -88,6 +88,7 @@ Clipper uses the following open source libraries:
 
 ## Release to npm
 
+1. Remove old build files with `rm -rf dist`
 1. Update the version in `package.json` if minor or major version
 2. Run `npm run build`
 3. Run `npm publish --access public`
