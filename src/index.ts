@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from '@commander-js/extra-typings';
+import { program } from 'commander';
 import { extract_from_html, extract_from_url } from './clipper';
 import { readHtmlFileFromPath, writeMarkdownToFile, writeMarkdownToJsonlines } from './utils';
 import { crawl } from './crawler';

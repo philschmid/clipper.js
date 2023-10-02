@@ -4,6 +4,11 @@ Clipper is a Node.js command line tool that allows you to easily clip content fr
 
 Clipper provides a quick and simple way to save bits of content from the web for personal archival or note taking purposes, similar to browser extensions like Evernote Web Clipper or Notion Web Clipper. However, Clipper runs entirely in the terminal so you don't need to install any extensions or sign up for accounts.
 
+
+| HTML                                   | Markdown                                       |
+| -------------------------------------- | ---------------------------------------------- |
+| ![Screenshot of HTMl](assets/html.png) | ![Screenshot of Markdown](assets/markdown.png) |
+
 ## Installation
 
 ```
@@ -61,13 +66,13 @@ Results will be saved in `dataset.jsonl` file in the current directory.
 ## Local Development
 
 - Clone the repo
-- Run `npm install`
-- Run `npm run dev` to start development mode with live reloading
-- Run `npm run build` to build for production
-- Run `npm install -g .` to symlink the CLI for local testing
-- Run `npm run test clip -u https://huggingface.co/docs/transformers/index` to test the CLI
-- Run `npm run test crawl -u https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/index.html -g https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/\*\*/\*` to crawl the AWS Neuron docs
-- Remove the symlink with `npm r clipper -g`
+- Run `pnpm install`
+- Run `pnpm run test clip -u https://huggingface.co/docs/transformers/index` to test the CLI
+- Run `pnpm run test crawl -u https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/index.html -g https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/\*\*/\*` to crawl the AWS Neuron docs
+- Run `pnpm run build` to build for production
+- Run `clipper clip -u https://huggingface.co/docs/transformers/index` to build for development
+- Run `pnpm install -g .` to symlink the CLI for local testing
+- Remove the symlink with `pnpm r clipper -g`
 ## Credits
 
 Clipper uses the following open source libraries:
