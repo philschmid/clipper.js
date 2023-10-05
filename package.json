@@ -11,6 +11,9 @@
   "bin": {
     "clipper": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@huggingface/hub": "^0.8.3",
     "@mozilla/readability": "^0.4.4",
