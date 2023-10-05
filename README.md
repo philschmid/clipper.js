@@ -15,6 +15,8 @@ Clipper provides a quick and simple way to save bits of content from the web for
 npm install -g @philschmid/clipper
 ```
 
+_note: for crawling you need `playwright` and the browser dependencies._
+
 ## Usage
 
 ### Clip
@@ -66,13 +68,13 @@ Results will be saved in `dataset.jsonl` file in the current directory.
 ## Local Development
 
 - Clone the repo
-- Run `pnpm install`
-- Run `pnpm run test clip -u https://huggingface.co/docs/transformers/index` to test the CLI
-- Run `pnpm run test crawl -u https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/index.html -g https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/\*\*/\*` to crawl the AWS Neuron docs
-- Run `pnpm run build` to build for production
+- Run `npm install`
+- Run `npm run test -- clip -u https://huggingface.co/docs/transformers/index` to test the CLI
+- Run `npm run test -- crawl -u https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/index.html -g https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/\*\*/\*` to crawl the AWS Neuron docs
+- Run `npm run build` to build for production
+- Run `npm install -g .` to symlink the CLI for local testing
 - Run `clipper clip -u https://huggingface.co/docs/transformers/index` to build for development
-- Run `pnpm install -g .` to symlink the CLI for local testing
-- Remove the symlink with `pnpm r clipper -g`
+- Remove the symlink with `npm r clipper -g`
 ## Credits
 
 Clipper uses the following open source libraries:

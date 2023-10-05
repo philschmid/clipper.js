@@ -1,7 +1,6 @@
 import { PlaywrightCrawler, Dataset } from 'crawlee'
 import { extract_from_html } from './clipper'
-import { writeMarkdownToJsonlines } from './utils'
-import { rm, rmdir, rmdirSync, writeFileSync } from 'fs'
+import { rm, writeFileSync } from 'fs'
 
 
 export async function crawl(url: string, output: any, additionalGlobalUrls: string[] = [], headless: boolean = true,) {
