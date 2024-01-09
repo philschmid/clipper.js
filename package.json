@@ -1,6 +1,6 @@
 {
   "name": "@philschmid/clipper",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "A CLI to clip articles from the web and save them as markdown files.",
   "author": "Philipp Schmid",
   "main": "dist/index.js",

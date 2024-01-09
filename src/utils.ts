@@ -6,16 +6,24 @@ export function readHtmlFileFromPath(path: string): string {
   return html;
 }
 
-export function writeMarkdownToFile(markdown: string, output: string): string {
-  // check if outout is a markdown file else remove extension and add .md
-  const outputFileName = output.endsWith('.md') ? output : output.replace(/\.[^/.]+$/, "") + '.md'
-  // write markdown to file
-  writeFileSync(outputFileName, markdown)
-  // return filename
-  return outputFileName
+export function writeMarkdownToFile(markdown: string | Record<"markdown", string>[], output: string) {
+  // check if markdown is array if yes loop over it an save 1 file per element
+  if (Array.isArray(markdown)) {
+    markdown.forEach((md, i) => {
+      // check if outout is a markdown file else remove extension and add .md
+      const outputFileName = output.replace(/\.[^/.]+$/, "") + `_${i}.md`
+      // write markdown to file
+      writeFileSync(outputFileName, md.markdown)
+    })
+  } else {
+    // check if outout is a markdown file else remove extension and add .md
+    const outputFileName = output.replace(/\.[^/.]+$/, "") + '.md'
+    // write markdown to file
+    writeFileSync(outputFileName, markdown)
+  }
 }
 
-export function writeMarkdownToJsonlines(markdown: string | string[], output: string): string {
+export function writeMarkdownToJsonlines(markdown: string | Record<string, string>[], output: string): string {
   // check if outout is a jsonl file else remove extension and add .jsonl
   const outputFileName = output.endsWith('.jsonl') ? output : output.replace(/\.[^/.]+$/, "") + '.jsonl'
   // check if markdown is string, if convert to array
