@@ -64,6 +64,17 @@ clipper crawl -u <url>
 
 Results will be saved in `dataset.jsonl` file in the current directory.
 
+## Alternative use cases 
+
+### Convert PDF to Markdown
+
+If you want to convert a PDF to Markdown you can use [poppler](https://wiki.ubuntuusers.de/poppler-utils/) to convert the PDF to HTML and then use Clipper to convert the HTML to Markdown.
+
+```
+pdftohtml -c -s -noframes test.pdf test.html
+clipper clip -i test.html
+```
+
 
 ## Local Development
 
