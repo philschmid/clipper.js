@@ -23,7 +23,7 @@ _note: for crawling you need `playwright` and the browser dependencies._
 
 **Options:**
 
-- `-i, --input <file>` - Input file (html) to clip content from
+- `-i, --input <file> | <directory>` - Input file (html) or directory to clip content from. If a directory is provided, all files in the directory will be clipped.
 - `-u, --url <url>` - URL to clip content from
 - `-f, --format <format>` - Output format (markdown, json) (default: markdown)
 - `-o, --output <file>` - Output file for clipped content (default: output.md)
@@ -41,6 +41,12 @@ clipper clip -u <url>
 
 ```
 clipper clip -i <file>
+```
+
+3. Clip content from a directory, convert a directory of HTML files to a jsonl file:
+
+```
+clipper clip -i <directory> -f json -o dataset.jsonl
 ```
 
 ### Crawl 
@@ -81,6 +87,7 @@ clipper clip -i test.html
 - Clone the repo
 - Run `npm install`
 - Run `npm run test -- clip -u https://huggingface.co/docs/transformers/index` to test the CLI
+- Run `npm run test -- clip -i examples/` to test the CLI with directory input
 - Run `npm run test -- crawl -u https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/index.html -g https://awsdocs-neuron.readthedocs-hosted.com/en/v2.14.1/\*\*/\*` to crawl the AWS Neuron docs
 - Run `npm run build` to build for production
 - Run `npm install -g .` to symlink the CLI for local testing
